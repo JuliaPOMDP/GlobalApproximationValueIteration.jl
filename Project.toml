@@ -1,0 +1,6 @@
+authors = ["Shushman <shushmanchoudhury@gmail.com>"]
+name = "GlobalApproximationValueIteration"
+uuid = "277f244e-4908-11e9-33c2-5d5365097ef8"
+version = "0.1.0"
+
+[deps]
