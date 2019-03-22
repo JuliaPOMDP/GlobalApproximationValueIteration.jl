@@ -1,12 +1,13 @@
-mutable struct NonlinearGlobalFunctionApproximator <: GlobalFunctionApproximator
-    model::??
-    optimizer::??
+mutable struct NonlinearGlobalFunctionApproximator{M,O,L} <: GlobalFunctionApproximator
+    model::M
+    optimizer::O
+    loss::L
 end
 
-function fit!(ngfa::NonlinearGlobalFunctionApproximator, dataset_input::AbstractMatrix{Float64},
-              dataset_output::AbstractVector{Float64})
+function fit!(ngfa::NonlinearGlobalFunctionApproximator, dataset_input::M,
+              dataset_output::V) where { M <: AbstractMatrix{Float64}, V <: AbstractVector{Float64} }
     # TODO: Create `dataset` combining input and output?
-    Flux.train!(params(ngfa.model), mse, dataset, ngfa.optimizer)
+    Flux.train!(params(ngfa.model), ngfa.loss, dataset, ngfa.optimizer)
 end
 
 function compute_value(ngfa::NonlinearGlobalFunctionApproximator, v::AbstractVector{Float64})
