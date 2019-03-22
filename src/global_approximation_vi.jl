@@ -1,19 +1,19 @@
 mutable struct GlobalApproximationValueIterationSolver{GFA <: GlobalFunctionApproximator, RNG <: AbstractRNG} <: Solver
     gfa::GFA
     num_samples::Int64
+    belres::Float64
     num_iterations::Int64
-    # TODO: Do we need a belres?
     verbose::Bool
     rng::RNG
     is_mdp_generative::Bool
     n_generative_samples::Int64
 end
 
-function GlobalApproximationValueIterationSolver(gfa::GFA, num_samples::Int64,
+function GlobalApproximationValueIterationSolver(gfa::GFA, num_samples::Int64, belres::Float64=1e-3,
                                                  num_iterations::Int64=1000, verbose::Bool=false,
                                                  rng::RNG=Random.GLOBAL_RNG, is_mdp_generative::Bool=false,
                                                  n_generative_samples::Int64=0) where {GFA <: GlobalFunctionApproximator}
-    return GlobalApproximationValueIterationSolver(gfa, num_samples, num_iterations, verbose, rng, is_mdp_generative, n_generative_samples)
+    return GlobalApproximationValueIterationSolver(gfa, num_samples, belres, num_iterations, verbose, rng, is_mdp_generative, n_generative_samples)
 end
 
 function GlobalApproximationValueIterationSolver()
@@ -64,17 +64,21 @@ end
     end
 
     # Different conversion requirements depending on whether linear or nonlinear gfa
-    # TODO : If it's some custom one, we can't require anything as such right? Let's talk about this
-    if typeof(solver.gfa) == LinearGlobalFunctionApproximator
-        @req convert_featurevector(::Type{V} where V <: AbstractVector{Float64},::S,::P)
-    # TODO: Let's definitely talk about the == above and the <: below
-    elseif typeof(solver.gfa) <: NonlinearGlobalFunctionApproximator
-        @req convert_s(::Type{V} where V <: AbstractVector{Float64},::S,::P)
-    else
-        @warn "Solver GFA must either be Linear or a derivative of Nonlinear!"
-    end
+    # if typeof(solver.gfa) <: LinearGlobalFunctionApproximator
+    #     @req convert_featurevector(::Type{V} where V <: AbstractVector{Float64},::S,::P)
+    # elseif typeof(solver.gfa) <: NonlinearGlobalFunctionApproximator
+    #     @req convert_s(::Type{V} where V <: AbstractVector{Float64},::S,::P)
+    # else
+    #     @warn "Solver GFA must be derived from either LinearGFA or NonlinearGDA!"
+    # end
+    # TODO : Maxime - Is this what you had in mind?
+    @subreq convert_featurevector(::Type{V} where V <: AbstractVector{Float64}, ::S, ::P, ::Type{G} where G <: GlobalFunctionApproximator)
 end
 
+function convert_featurevector(::Type{V} where V <: AbstractVector{Float64}, s::S, mdp::Union{MDP,POMDP}, ::Type{G} where G <: NonlinearGlobalFunctionApproximator)
+    @req convert_s(::Type{V} where V <: AbstractVector{Float64},::S,::typeof(mdp))
+    return convert_s(V,s,mdp)
+end
 
 function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Union{MDP,POMDP}) where RNG <: AbstractRNG
 
@@ -86,9 +90,11 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
     end
 
     # Solver parameters
+    belres = solver.belres
     num_iterations = solver.num_iterations
     num_samples = solver.num_samples
     discount_factor = discount(mdp)
+    gfa_type = typeof(solver.gfa)
 
     # Initialize the policy
     policy = GlobalApproximationValueIterationPolicy(mdp,solver)
@@ -97,13 +103,13 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
     iter_time = 0.0
 
     temp_s = sample_state(mdp, solver.rng)
-    state_dim = length(convert_featurevector(Vector{Float64}, temp_s, mdp))
-
-    # TODO: Will this work?
-    convert_fn = (typeof(solver.gfa) == LinearGlobalFunctionApproximator) ? convert_featurevector : convert_s
+    state_dim = length(convert_featurevector(Vector{Float64}, temp_s, mdp, gfa_type))
 
 
     for iter = 1:num_iterations
+
+        residual
+
         # Setup input and outputs for fit functions
         state_matrix = zeros(num_samples, state_dim)
         val_vector = zeros(num_samples)
@@ -114,7 +120,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
 
             s = sample_state(mdp, solver.rng)
             
-            pt = convert_fn(Vector{Float64}, s, mdp)
+            pt = convert_featurevector(Vector{Float64}, s, mdp, gfa_type)
             state_matrix[i,:] = pt
 
             sub_aspace = actions(mdp,s)
@@ -123,6 +129,8 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
             if isterminal(mdp, s)
                 val_vector[i] = 0.0
             else
+                # TODO: Is this the right way to get residual using old_util?
+                old_util = value(policy, s)
                 max_util = -Inf
 
                 for a in sub_aspace
@@ -135,7 +143,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
                             u += r
 
                             if !isterminal(mdp,sp)
-                                sp_feature = convert_fn(Vector{Float64}, sp, mdp)
+                                sp_feature = convert_featurevector(Vector{Float64}, sp, mdp, gfa_type)
                                 u += p * (discount_factor*compute_value(policy.gfa, sp_feature))
                             end
                         end
@@ -149,13 +157,15 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
 
                             # Only interpolate sp if it is non-terminal
                             if !isterminal(mdp,sp)
-                                sp_feature = convert_fn(Vector{Float64}, sp, mdp)
+                                sp_feature = convert_featurevector(Vector{Float64}, sp, mdp, typeof(solver.gfa))
                                 u += p * (discount_factor*compute_value(policy.gfa, sp_feature))
                             end
                         end
                     end
 
                     max_util = (u > max_util) ? u : max_util
+                    util_diff = abs(max_util - old_util)
+                    util_diff > residual ? (residual = util_diff) : nothing
                 end #action
 
                 val_vector[i] = max_util
@@ -165,9 +175,10 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
         fit!(policy.gfa, state_matrix, val_vector)
 
         end # time
+        # TODO : I feel like the residual should be the overall loss of the fit! function ?
         total_time += iter_time
-
-        # TODO: For verbose solver, output loss?
+        solver.verbose ? @printf("[Iteration %-4d] residual: %10.3G | iteration runtime: %10.3f ms, (%10.3G s total)\n", iter, residual, iter_time*1000.0, total_time) : nothing
+        residual < belres ? break : nothing
     end
 
     return policy
@@ -176,8 +187,7 @@ end
 # TODO: LOT OF OVERLAP between below fns and LocalApproxVI - any way to make compact?
 function value(policy::GlobalApproximationValueIterationPolicy, s::S) where S
 
-    convert_fn = (typeof(solver.gfa) == LinearGlobalFunctionApproximator) ? convert_featurevector : convert_s
-    s_point = convert_fn(Vector{Float64}, s, policy.mdp)
+    s_point = convert_featurevector(Vector{Float64}, s, policy.mdp,typeof(solver.gfa))
     val = compute_value(policy.gfa, s_point)
     return val
 end
@@ -212,8 +222,6 @@ function action_value(policy::GlobalpproximationValueIterationPolicy, s::S, a::A
 
     mdp = policy.mdp
     discount_factor = discount(mdp)
-    convert_fn = (typeof(solver.gfa) == LinearGlobalFunctionApproximator) ? convert_featurevector : convert_s
-
     u = 0.0
 
     # As in solve(), do different things based on whether 
@@ -221,7 +229,7 @@ function action_value(policy::GlobalpproximationValueIterationPolicy, s::S, a::A
     if policy.is_mdp_generative
         for j in 1:policy.n_generative_samples
             sp, r = generate_sr(mdp, s, a, policy.rng)
-            sp_point = convert_fn(Vector{Float64}, sp, mdp)
+            sp_point = convert_featurevector(Vector{Float64}, sp, mdp, typeof(solver.gfa))
             u += r + discount_factor*compute_value(policy.gfa, sp_point)
         end
         u = u / policy.n_generative_samples
@@ -234,7 +242,7 @@ function action_value(policy::GlobalpproximationValueIterationPolicy, s::S, a::A
 
             # Only interpolate sp if it is non-terminal
             if !isterminal(mdp,sp)
-                sp_point = convert_fn(Vector{Float64}, sp, mdp)
+                sp_point = convert_featurevector(Vector{Float64}, sp, mdp, typeof(solver.gfa))
                 u += p*(discount_factor*compute_value(policy.gfa, sp_point))
             end
         end
