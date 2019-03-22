@@ -1,5 +1,5 @@
-mutable struct LinearGlobalFunctionApproximator <: GlobalFunctionApproximator
-    weights::AbstractVector{Float64}
+mutable struct LinearGlobalFunctionApproximator{W <: AbstractVector{Float64}} <: GlobalFunctionApproximator
+    weights::W
 end
 
 function fit!(lgfa::LinearGlobalFunctionApproximator, dataset_input::AbstractMatrix{Float64},
@@ -8,7 +8,7 @@ function fit!(lgfa::LinearGlobalFunctionApproximator, dataset_input::AbstractMat
 end
 
 
-function compute_value(lgfa::LinearGlobalFunctionApproximator, v::AbstractVector{Float64})
+function compute_value(lgfa::LinearGlobalFunctionApproximator, v::V) where V <: AbstractVector{Float64}
     @assert length(lgfa.weights) == length(v)
     return dot(lgfa.weights, v)
 end
