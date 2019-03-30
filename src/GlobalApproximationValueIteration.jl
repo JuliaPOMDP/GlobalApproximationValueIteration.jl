@@ -5,6 +5,10 @@ using LinearAlgebra
 using Random
 using Printf
 
+# For function approximation
+using MultivariateStats
+using Flux
+
 # POMDPs imports
 using POMDPs
 using POMDPPolicies
@@ -21,7 +25,7 @@ export
 export
     GlobalApproximationValueIterationSolver,
     GlobalApproximationValueIterationPolicy,
-    compute_featurevector,
+    convert_featurevector,
     solve,
     action,
     value,
