@@ -4,7 +4,8 @@ end
 
 function fit!(lgfa::LinearGlobalFunctionApproximator, dataset_input::AbstractMatrix{Float64},
               dataset_output::AbstractVector{Float64})
-# TODO: Need to flesh this out
+    # TODO: Should we assume bias=false by default and delegate to user in feature vector? like [1 x x^2 ...]
+    lgfa.weights = llsq(dataset_input,dataset_output,bias=false)
 end
 
 
