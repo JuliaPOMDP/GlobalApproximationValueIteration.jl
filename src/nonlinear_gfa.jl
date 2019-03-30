@@ -6,13 +6,20 @@ end
 
 function fit!(ngfa::NonlinearGlobalFunctionApproximator, dataset_input::M,
               dataset_output::V) where { M <: AbstractMatrix{Float64}, V <: AbstractVector{Float64} }
-    # TODO: Create `dataset` combining input and output?
-    Flux.train!(params(ngfa.model), ngfa.loss, dataset, ngfa.optimizer)
+    # Create loss function with loss type
+    loss(x, y) = ngfa.loss(ngfa.model(x), y)
+
+    # TODO: Can you confirm this is necessary? Flux seems to require data as a vector of tuples
+    # https://fluxml.ai/Flux.jl/stable/training/training/#Datasets-1
+    num_samples = length(dataset_output)
+    data = [(dataset_input[i,:], dataset_output[i]) for i = 1:num_samples]
+
+    Flux.train!(ngfa.loss, params(ngfa.model), data, ngfa.optimizer)
 end
 
 function compute_value(ngfa::NonlinearGlobalFunctionApproximator, v::AbstractVector{Float64})
-    # TODO: What's the generic way for this?
-
+    # TODO: Is this the correct API?
+    return ngfa.model(v)
 end
 
 function compute_value(ngfa::NonlinearGlobalFunctionApproximator, 
