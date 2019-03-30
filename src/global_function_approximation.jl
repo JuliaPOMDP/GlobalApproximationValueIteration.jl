@@ -1,7 +1,6 @@
 abstract type GlobalFunctionApproximator end
 
 
-# TODO: Specify that the below does not assume a loss, but we implement the defaults for LSE loss?
 """
     fit!(gfa::GlobalFunctionApproximator, dataset_input::AbstractMatrix, dataset_output::AbstractVector)
 Fit the global function approximator to the dataset using some optimization method and a chosen
