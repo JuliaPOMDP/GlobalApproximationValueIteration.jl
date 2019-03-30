@@ -35,6 +35,15 @@ function GlobalApproximationValueIterationPolicy(mdp::Union{MDP,POMDP},
                                                    solver.is_mdp_generative,solver.n_generative_samples,solver.rng)
 end
 
+# If global function approximator is non-linear, a default convert_s is required
+@POMDP_require convert_featurevector(::Type{V} where V <: AbstractVector{Float64}, s::S where S, mdp::Union{MDP,POMDP}, ::Type{G} where G <: NonlinearGlobalFunctionApproximator) begin
+    @req convert_s(::Type{V} where V <: AbstractVector{Float64},::S,::typeof(mdp))
+end
+
+function convert_featurevector(::Type{V} where V <: AbstractVector{Float64}, s::S, mdp::Union{MDP,POMDP}, ::Type{G} where G <: NonlinearGlobalFunctionApproximator)
+    return convert_s(V,s,mdp)
+end
+
 @POMDP_require solve(solver::GlobalApproximationValueIterationSolver, mdp::Union{MDP,POMDP}) begin
 
     P = typeof(mdp)
@@ -63,21 +72,8 @@ end
         @req support(::D)
     end
 
-    # Different conversion requirements depending on whether linear or nonlinear gfa
-    # if typeof(solver.gfa) <: LinearGlobalFunctionApproximator
-    #     @req convert_featurevector(::Type{V} where V <: AbstractVector{Float64},::S,::P)
-    # elseif typeof(solver.gfa) <: NonlinearGlobalFunctionApproximator
-    #     @req convert_s(::Type{V} where V <: AbstractVector{Float64},::S,::P)
-    # else
-    #     @warn "Solver GFA must be derived from either LinearGFA or NonlinearGDA!"
-    # end
-    # TODO : Maxime - Is this what you had in mind?
+    # Feature vector conversion must be defined either directly or by default (throuhg convert_s)
     @subreq convert_featurevector(::Type{V} where V <: AbstractVector{Float64}, ::S, ::P, ::Type{G} where G <: GlobalFunctionApproximator)
-end
-
-function convert_featurevector(::Type{V} where V <: AbstractVector{Float64}, s::S, mdp::Union{MDP,POMDP}, ::Type{G} where G <: NonlinearGlobalFunctionApproximator)
-    @req convert_s(::Type{V} where V <: AbstractVector{Float64},::S,::typeof(mdp))
-    return convert_s(V,s,mdp)
 end
 
 function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Union{MDP,POMDP}) where RNG <: AbstractRNG
@@ -125,11 +121,9 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
 
             sub_aspace = actions(mdp,s)
 
-            # TODO : Does this make sense for global?
             if isterminal(mdp, s)
                 val_vector[i] = 0.0
             else
-                # TODO: Is this the right way to get residual using old_util?
                 old_util = value(policy, s)
                 max_util = -Inf
 
@@ -184,7 +178,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
     return policy
 end
 
-# TODO: LOT OF OVERLAP between below fns and LocalApproxVI - any way to make compact?
+# TODO: LOT OF OVERLAP between below fns and those for LocalApproxVI - any way to make compact?
 function value(policy::GlobalApproximationValueIterationPolicy, s::S) where S
 
     s_point = convert_featurevector(Vector{Float64}, s, policy.mdp,typeof(solver.gfa))
