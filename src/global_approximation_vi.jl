@@ -36,12 +36,13 @@ function GlobalApproximationValueIterationPolicy(mdp::Union{MDP,POMDP},
 end
 
 # If global function approximator is non-linear, a default convert_s is required
-@POMDP_require convert_featurevector(::Type{V} where V <: AbstractVector{Float64}, s::S where S, mdp::Union{MDP,POMDP}, ::Type{G} where G <: NonlinearGlobalFunctionApproximator) begin
-    @req convert_s(::Type{V} where V <: AbstractVector{Float64},::S,::typeof(mdp))
+@POMDP_require convert_featurevector(::Type{V}, s::S, mdp::Union{MDP,POMDP}, ::Type{G}) where {V <: AbstractArray, S, G <: NonlinearGlobalFunctionApproximator} begin
+    @req convert_s(::Type{V} where V <: AbstractArray,::S,::typeof(mdp))
 end
 
-function convert_featurevector(::Type{V} where V <: AbstractVector{Float64}, s::S, mdp::Union{MDP,POMDP}, ::Type{G} where G <: NonlinearGlobalFunctionApproximator)
+function convert_featurevector(::Type{V}, s::S, mdp::Union{MDP,POMDP}, ::Type{G}) where {V <: AbstractArray, G <: NonlinearGlobalFunctionApproximator}
     return convert_s(V,s,mdp)
+}
 end
 
 @POMDP_require solve(solver::GlobalApproximationValueIterationSolver, mdp::Union{MDP,POMDP}) begin
@@ -73,10 +74,10 @@ end
     end
 
     # Feature vector conversion must be defined either directly or by default (throuhg convert_s)
-    @subreq convert_featurevector(::Type{V} where V <: AbstractVector{Float64}, ::S, ::P, ::Type{G} where G <: GlobalFunctionApproximator)
+    @subreq convert_featurevector(::Type{V}, ::S, ::P, ::Type{G}) where {V <: AbstractArray, G <: GlobalFunctionApproximator}
 end
 
-function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Union{MDP,POMDP}) where RNG <: AbstractRNG
+function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Union{MDP,POMDP})
 
     @warn_requirements solve(solver,mdp)
 
@@ -107,6 +108,8 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
         residual
 
         # Setup input and outputs for fit functions
+        # state_matrix = Vector{solver.featurevectortype}
+        # state_matrix = Matrix{eltype(V)}(undef, state)
         state_matrix = zeros(num_samples, state_dim)
         val_vector = zeros(num_samples)
 
@@ -116,6 +119,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
 
             s = sample_state(mdp, solver.rng)
             
+            # pt = convert_featurevector(solver.FVtype, s, mdp, gfa_type)
             pt = convert_featurevector(Vector{Float64}, s, mdp, gfa_type)
             state_matrix[i,:] = pt
 
