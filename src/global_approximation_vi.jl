@@ -1,4 +1,4 @@
-mutable struct GlobalApproximationValueIterationSolver{GFA <: GlobalFunctionApproximator, RNG <: AbstractRNG} <: Solver
+mutable struct GlobalApproximationValueIterationSolver{GFA <: GlobalFunctionApproximator, RNG <: AbstractRNG, F} <: Solver
     gfa::GFA
     num_samples::Int64
     belres::Float64
@@ -7,6 +7,7 @@ mutable struct GlobalApproximationValueIterationSolver{GFA <: GlobalFunctionAppr
     rng::RNG
     is_mdp_generative::Bool
     n_generative_samples::Int64
+    fv_type::F
 end
 
 function GlobalApproximationValueIterationSolver(gfa::GFA, num_samples::Int64, belres::Float64=1e-3,
@@ -20,29 +21,29 @@ function GlobalApproximationValueIterationSolver()
     throw(ArgumentError("GlobalApproximationValueIterationSolver needs a GlobalFunctionApproximator object for construction!"))
 end
 
-mutable struct GlobalApproximationValueIterationPolicy{GFA <: GlobalFunctionApproximator, RNG <: AbstractRNG} <: Policy
+mutable struct GlobalApproximationValueIterationPolicy{GFA <: GlobalFunctionApproximator, RNG <: AbstractRNG, F} <: Policy
     gfa::GFA
     action_map::Vector
     mdp::Union{MDP,POMDP}
     is_mdp_generative::Bool
     n_generative_samples::Int64
+    fv_type::F
     rng::RNG
 end
 
 function GlobalApproximationValueIterationPolicy(mdp::Union{MDP,POMDP},
                                                  solver::GlobalApproximationValueIterationSolver)
-    return GlobalApproximationValueIterationPolicy(deepcopy(solver.gfa),ordered_actions(mdp),mdp,
-                                                   solver.is_mdp_generative,solver.n_generative_samples,solver.rng)
+    return GlobalApproximationValueIterationPolicy(deepcopy(solver.gfa), ordered_actions(mdp), mdp,
+                                                   solver.is_mdp_generative, solver.n_generative_samples, solver.fv_type, solver.rng)
 end
 
 # If global function approximator is non-linear, a default convert_s is required
-@POMDP_require convert_featurevector(::Type{V}, s::S, mdp::Union{MDP,POMDP}, ::Type{G}) where {V <: AbstractArray, S, G <: NonlinearGlobalFunctionApproximator} begin
-    @req convert_s(::Type{V} where V <: AbstractArray,::S,::typeof(mdp))
+@POMDP_require convert_featurevector(::Type{V} where {V <: AbstractArray}, s::S where S, mdp::Union{MDP,POMDP}, ::Type{G} where {G <: NonlinearGlobalFunctionApproximator}) begin
+    @req convert_s(::Type{V} where V <: AbstractArray, ::S, ::typeof(mdp))
 end
 
 function convert_featurevector(::Type{V}, s::S, mdp::Union{MDP,POMDP}, ::Type{G}) where {V <: AbstractArray, G <: NonlinearGlobalFunctionApproximator}
-    return convert_s(V,s,mdp)
-}
+    return convert_s(V, s, mdp)
 end
 
 @POMDP_require solve(solver::GlobalApproximationValueIterationSolver, mdp::Union{MDP,POMDP}) begin
@@ -74,7 +75,7 @@ end
     end
 
     # Feature vector conversion must be defined either directly or by default (throuhg convert_s)
-    @subreq convert_featurevector(::Type{V}, ::S, ::P, ::Type{G}) where {V <: AbstractArray, G <: GlobalFunctionApproximator}
+    @subreq convert_featurevector(::Type{V} where {V <: AbstractArray}, ::S, ::P, ::Type{G} where {G <: GlobalFunctionApproximator})
 end
 
 function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Union{MDP,POMDP})
@@ -94,13 +95,13 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
     gfa_type = typeof(solver.gfa)
 
     # Initialize the policy
-    policy = GlobalApproximationValueIterationPolicy(mdp,solver)
+    policy = GlobalApproximationValueIterationPolicy(mdp, solver)
 
     total_time = 0.0
     iter_time = 0.0
 
     temp_s = sample_state(mdp, solver.rng)
-    state_dim = length(convert_featurevector(Vector{Float64}, temp_s, mdp, gfa_type))
+    state_dim = length(convert_featurevector(solver.fv_type, temp_s, mdp, gfa_type))
 
 
     for iter = 1:num_iterations
@@ -108,10 +109,8 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
         residual
 
         # Setup input and outputs for fit functions
-        # state_matrix = Vector{solver.featurevectortype}
-        # state_matrix = Matrix{eltype(V)}(undef, state)
-        state_matrix = zeros(num_samples, state_dim)
-        val_vector = zeros(num_samples)
+        state_matrix = zeros(eltype(solver.FVtype), num_samples, state_dim)
+        val_vector = zeros(eltype(solver.FVtype), num_samples)
 
         iter_time = @elapsed begin
 
@@ -119,8 +118,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
 
             s = sample_state(mdp, solver.rng)
             
-            # pt = convert_featurevector(solver.FVtype, s, mdp, gfa_type)
-            pt = convert_featurevector(Vector{Float64}, s, mdp, gfa_type)
+            pt = convert_featurevector(solver.fv_type, s, mdp, gfa_type)
             state_matrix[i,:] = pt
 
             sub_aspace = actions(mdp,s)
@@ -141,7 +139,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
                             u += r
 
                             if !isterminal(mdp,sp)
-                                sp_feature = convert_featurevector(Vector{Float64}, sp, mdp, gfa_type)
+                                sp_feature = convert_featurevector(solver.fv_type, sp, mdp, gfa_type)
                                 u += p * (discount_factor*compute_value(policy.gfa, sp_feature))
                             end
                         end
@@ -155,7 +153,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
 
                             # Only interpolate sp if it is non-terminal
                             if !isterminal(mdp,sp)
-                                sp_feature = convert_featurevector(Vector{Float64}, sp, mdp, typeof(solver.gfa))
+                                sp_feature = convert_featurevector(solver.fv_type, sp, mdp, gfa_type)
                                 u += p * (discount_factor*compute_value(policy.gfa, sp_feature))
                             end
                         end
@@ -185,7 +183,7 @@ end
 # TODO: LOT OF OVERLAP between below fns and those for LocalApproxVI - any way to make compact?
 function value(policy::GlobalApproximationValueIterationPolicy, s::S) where S
 
-    s_point = convert_featurevector(Vector{Float64}, s, policy.mdp,typeof(solver.gfa))
+    s_point = convert_featurevector(policy.fv_type, s, policy.mdp, typeof(solver.gfa))
     val = compute_value(policy.gfa, s_point)
     return val
 end
@@ -227,7 +225,7 @@ function action_value(policy::GlobalpproximationValueIterationPolicy, s::S, a::A
     if policy.is_mdp_generative
         for j in 1:policy.n_generative_samples
             sp, r = generate_sr(mdp, s, a, policy.rng)
-            sp_point = convert_featurevector(Vector{Float64}, sp, mdp, typeof(solver.gfa))
+            sp_point = convert_featurevector(policy.fv_type, sp, mdp, typeof(policy.gfa))
             u += r + discount_factor*compute_value(policy.gfa, sp_point)
         end
         u = u / policy.n_generative_samples
@@ -240,7 +238,7 @@ function action_value(policy::GlobalpproximationValueIterationPolicy, s::S, a::A
 
             # Only interpolate sp if it is non-terminal
             if !isterminal(mdp,sp)
-                sp_point = convert_featurevector(Vector{Float64}, sp, mdp, typeof(solver.gfa))
+                sp_point = convert_featurevector(policy.fv_type, sp, mdp, typeof(policy.gfa))
                 u += p*(discount_factor*compute_value(policy.gfa, sp_point))
             end
         end

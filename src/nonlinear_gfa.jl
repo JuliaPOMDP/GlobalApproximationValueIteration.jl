@@ -17,5 +17,5 @@ end
 
 function compute_value(ngfa::NonlinearGlobalFunctionApproximator, state_vector::AbstractArray{T}) where T
     # TODO: Is this the correct API?
-    return Flux.data(ngfa.model(state_vector)) # TODO: or flatten
+    return Flux.data(ngfa.model(state_vector))[1]
 end
