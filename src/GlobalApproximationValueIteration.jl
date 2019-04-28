@@ -12,7 +12,6 @@ using Flux
 # POMDPs imports
 using POMDPs
 using POMDPPolicies
-using POMDPModels
 using POMDPModelTools
 
 export
@@ -26,11 +25,10 @@ export
     GlobalApproximationValueIterationSolver,
     GlobalApproximationValueIterationPolicy,
     convert_featurevector,
-    solve,
-    action,
-    value,
+    sample_state,
     action_value
 
+function sample_state end
 
 include("global_function_approximation.jl")
 include("linear_gfa.jl")
