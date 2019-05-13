@@ -215,7 +215,7 @@ function POMDPs.action(policy::GlobalApproximationValueIterationPolicy, s::S) wh
 end
 
 
-function action_value(policy::GlobalApproximationValueIterationPolicy, s::S, a::A) where {S,A}
+function POMDPs.value(policy::GlobalApproximationValueIterationPolicy, s::S, a::A) where {S,A}
 
     mdp = policy.mdp
     discount_factor = discount(mdp)

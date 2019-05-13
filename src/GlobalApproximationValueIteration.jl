@@ -25,8 +25,7 @@ export
     GlobalApproximationValueIterationSolver,
     GlobalApproximationValueIterationPolicy,
     convert_featurevector,
-    sample_state,
-    action_value
+    sample_state
 
 function sample_state end
 
