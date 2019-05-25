@@ -27,28 +27,83 @@ function GlobalApproximationValueIteration.sample_state(mdp::SimpleGridWorld, rn
 end
 
 
-function test_against_full_grid()
+function test_absolute_error()
 
-    rng = MersenneTwister(5678)
+    rng = MersenneTwister(1234)
 
-    # Generate a block of reward states from 40,40 to 60,60
+    MAX_ITERS = 500
+    NUM_SAMPLES = 1000
+
+    SIZE_X = 5
+    SIZE_Y = 5
+    REWARD_COV_PROB = 0.4
+
     rewards = Dict{GWPos, Float64}()
-    for x = 15:30
-        for y = 20:35
-            rewards[GWPos(x, y)] = 10
+    for x = 1:SIZE_X
+        for y = 1:SIZE_Y
+            if rand(rng) < REWARD_COV_PROB
+                rewards[GWPos(x, y)] = 1
+            end
         end
     end
 
     # Create MDP
-    mdp = SimpleGridWorld(size=(50, 50), rewards=rewards)
+    mdp = SimpleGridWorld(size=(SIZE_X, SIZE_Y), rewards=rewards)
+
+    lin_gfa = LinearGlobalFunctionApproximator(zeros(10))
+    gfa_solver = GlobalApproximationValueIterationSolver(lin_gfa, num_samples=NUM_SAMPLES, max_iterations=MAX_ITERS, verbose=true, fv_type=SVector{10, Float64})
+    gfa_policy = solve(gfa_solver, mdp)
+
+    solver = ValueIterationSolver(max_iterations=1000, verbose=true)
+    policy = solve(solver, mdp)
+
+    error_arr = Vector{Float64}(undef, 0)
+
+    for state in states(mdp)
+
+        full_val = value(policy, state)
+        approx_val = value(gfa_policy, state)
+        abs_diff = abs(full_val - approx_val)
+
+        push!(error_arr, abs_diff)
+    end
+
+    @show mean(error_arr)
+    @show maximum(error_arr)
+
+    return (mean(error_arr) < 0.04 && maximum(error_arr) < 0.35)
+end
+
+
+function test_relative_error()
+
+    rng = MersenneTwister(2378)
 
     # Attempt to approximate globally with N samples and M iterations. As N increases, the average error should decrease
-    MAX_ITERS = 100
-
-    NUM_SAMPLES_LOW = 100
+    MAX_ITERS = 500
+    NUM_SAMPLES_LOW = 30
     NUM_SAMPLES_HI = 1000
 
-    lin_gfa_1 = LinearGlobalFunctionApproximator(zeros(10)) # TODO : automatic??
+    # Grid probabilities
+    SIZE_X = 5
+    SIZE_Y = 5
+    REWARD_COV_PROB = 0.4
+
+    # Generate a block of reward states from 40,40 to 60,60
+    rewards = Dict{GWPos, Float64}()
+    for x = 1:SIZE_X
+        for y = 1:SIZE_Y
+            if rand(rng) < REWARD_COV_PROB
+                rewards[GWPos(x, y)] = 1
+            end
+        end
+    end
+
+    # Create MDP
+    mdp = SimpleGridWorld(size=(SIZE_X, SIZE_Y), rewards=rewards)
+    
+
+    lin_gfa_1 = LinearGlobalFunctionApproximator(zeros(10))
     lin_gfa_2 = LinearGlobalFunctionApproximator(zeros(10))
 
     solver_low = GlobalApproximationValueIterationSolver(lin_gfa_1; num_samples=NUM_SAMPLES_LOW, max_iterations=MAX_ITERS, verbose=true, fv_type=SVector{10, Float64})
@@ -61,8 +116,8 @@ function test_against_full_grid()
     solver = ValueIterationSolver(max_iterations=1000, verbose=true)
     policy = solve(solver, mdp)
 
-    total_err_low = 0.0
-    total_err_hi = 0.0
+    err_arr_low = Vector{Float64}(undef, 0)
+    err_arr_hi = Vector{Float64}(undef, 0)
 
     for state in states(mdp)
 
@@ -71,17 +126,17 @@ function test_against_full_grid()
         approx_val_low = value(policy_low, state)
         approx_val_hi = value(policy_hi, state)   
 
-        total_err_low += abs(full_val-approx_val_low)
-        total_err_hi += abs(full_val-approx_val_hi)
+        push!(err_arr_low, abs(full_val - approx_val_low))
+        push!(err_arr_hi, abs(full_val - approx_val_hi))
+
     end
-    
-    avg_err_low = total_err_low / length(states(mdp))
-    avg_err_hi = total_err_hi / length(states(mdp))
 
-    @show avg_err_low
-    @show avg_err_hi
+    @show mean(err_arr_low), mean(err_arr_hi)
+    @show maximum(err_arr_low), maximum(err_arr_hi)
 
-    return (avg_err_low > avg_err_hi)
+    return (mean(err_arr_low) > mean(err_arr_hi) && maximum(err_arr_low) > maximum(err_arr_hi))
 end
 
-@test test_against_full_grid() == true
+
+# @test test_absolute_error() == true
+@test test_relative_error() == true

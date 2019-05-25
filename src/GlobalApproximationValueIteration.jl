@@ -1,5 +1,8 @@
 module GlobalApproximationValueIteration
 
+using Base.Iterators: repeated
+
+
 # Stdlib imports
 using LinearAlgebra
 using Random
