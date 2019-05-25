@@ -10,7 +10,8 @@ function fit!(ngfa::NonlinearGlobalFunctionApproximator, dataset_input::Abstract
     loss(x, y) = ngfa.loss(ngfa.model(x), y)
 
     # NOTE : Minibatch update; 1 update to model weights
-    data = [(dataset_input, dataset_output)]
+    # data = repeated((param(transpose(dataset_input)), param(transpose(dataset_output))), 1)
+    data = repeated((transpose(dataset_input), transpose(dataset_output)), 1)
 
     Flux.train!(ngfa.loss, params(ngfa.model), data, ngfa.optimizer)
 end
