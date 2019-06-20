@@ -141,6 +141,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
 
                             if !isterminal(mdp,sp)
                                 sp_feature = convert_featurevector(solver.fv_type, sp, mdp)
+                                # XXX p undefined
                                 u += p * (discount_factor*compute_value(policy.gfa, sp_feature))
                             end
                         end
@@ -203,7 +204,7 @@ function POMDPs.action(policy::GlobalApproximationValueIterationPolicy, s::S) wh
     for a in sub_aspace
         
         iaction = actionindex(mdp, a)
-        u = action_value(policy,s,a)
+        u = value(policy,s,a)
 
         if u > max_util
             max_util = u
