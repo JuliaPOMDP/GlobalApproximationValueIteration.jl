@@ -13,7 +13,7 @@ function fit!(ngfa::NonlinearGlobalFunctionApproximator, dataset_input::Abstract
     # data = repeated((param(transpose(dataset_input)), param(transpose(dataset_output))), 1)
     data = repeated((transpose(dataset_input), transpose(dataset_output)), 1)
 
-    Flux.train!(ngfa.loss, params(ngfa.model), data, ngfa.optimizer)
+    Flux.train!(loss, params(ngfa.model), data, ngfa.optimizer)
 end
 
 function compute_value(ngfa::NonlinearGlobalFunctionApproximator, state_vector::AbstractArray{T}) where T
