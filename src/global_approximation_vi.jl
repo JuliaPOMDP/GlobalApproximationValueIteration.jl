@@ -106,7 +106,6 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
 
     for iter = 1:num_iterations
 
-        # TODO : Is this correct
         residual = 0.0
 
         # Setup input and outputs for fit functions
@@ -141,8 +140,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
 
                             if !isterminal(mdp,sp)
                                 sp_feature = convert_featurevector(solver.fv_type, sp, mdp)
-                                # XXX p undefined
-                                u += p * (discount_factor*compute_value(policy.gfa, sp_feature))
+                                u += discount_factor*compute_value(policy.gfa, sp_feature)
                             end
                         end
                         u = u / solver.n_generative_samples
@@ -182,7 +180,6 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
     return policy
 end
 
-# TODO: LOT OF OVERLAP between below fns and those for LocalApproxVI - any way to make compact?
 function POMDPs.value(policy::GlobalApproximationValueIterationPolicy, s::S) where S
 
     s_point = convert_featurevector(policy.fv_type, s, policy.mdp)
