@@ -31,6 +31,7 @@ function test_absolute_error()
 
     rng = MersenneTwister(1234)
 
+    # Set solver and grid world parameters
     MAX_ITERS = 500
     NUM_SAMPLES = 1000
 
@@ -47,15 +48,15 @@ function test_absolute_error()
         end
     end
 
-    # Create MDP
+    # Create the MDP for a typical grid world
     mdp = SimpleGridWorld(size=(SIZE_X, SIZE_Y), rewards=rewards)
 
+    # Create the linear function approximation with 10 weight parameters, initialized to zero
     lin_gfa = LinearGlobalFunctionApproximator(zeros(10))
+
+    # Initialize the global approximation solver with the linear approximator and solve the MDP to obtain the policy
     gfa_solver = GlobalApproximationValueIterationSolver(lin_gfa, num_samples=NUM_SAMPLES, max_iterations=MAX_ITERS, verbose=true, fv_type=SVector{10, Float64})
     gfa_policy = solve(gfa_solver, mdp)
-
-    solver = ValueIterationSolver(max_iterations=1000, verbose=true)
-    policy = solve(solver, mdp)
 
     error_arr = Vector{Float64}(undef, 0)
 

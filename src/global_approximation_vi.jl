@@ -114,6 +114,8 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
 
         iter_time = @elapsed begin
 
+        # Loop over the chosen number of samples for approximation
+        # and compute the current value function estimate at each sample
         for i = 1:num_samples
 
             s = sample_state(mdp, solver.rng)
@@ -129,6 +131,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
                 old_util = value(policy, s)
                 max_util = -Inf
 
+                # Compute the approximate Q value for each action and choose the best
                 for a in sub_aspace
                     iaction = actionindex(mdp,a)
                     u = 0.0
