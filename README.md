@@ -1,3 +1,7 @@
+[![Build Status](https://travis-ci.org/JuliaPOMDP/GlobalApproximationValueIteration.jl.svg?branch=master)](https://travis-ci.org/JuliaPOMDP/GlobalApproximationValueIteration.jl)
+[![Coverage Status](https://coveralls.io/repos/github/JuliaPOMDP/GlobalApproximationValueIteration.jl/badge.svg?branch=master)](https://coveralls.io/github/JuliaPOMDP/GlobalApproximationValueIteration.jl?branch=master)
+
+
 # GlobalApproximationValueIteration.jl
 
 This package implements the Global Approximation Value Iteration algorithm in Julia for solving
