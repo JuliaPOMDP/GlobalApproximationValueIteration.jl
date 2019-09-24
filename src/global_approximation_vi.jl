@@ -52,7 +52,6 @@ end
     S = statetype(P)
     A = actiontype(P)
     @req discount(::P)
-    @req n_actions(::P)
     @subreq ordered_actions(mdp)
 
     @req actionindex(::P, ::A)
@@ -65,7 +64,7 @@ end
 
     # Have different requirements depending on whether solver MDP is generative or explicit
     if solver.is_mdp_generative
-        @req generate_sr(::P, ::S, ::A, ::typeof(solver.rng))
+        @req gen(::DDNOut{(:sp,:r)}, ::P, ::S, ::A, ::typeof(solver.rng))
     else
         @req transition(::P, ::S, ::A)
         ss = sample_state(mdp, solver.rng)
@@ -119,7 +118,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
         for i = 1:num_samples
 
             s = sample_state(mdp, solver.rng)
-            
+
             pt = convert_featurevector(solver.fv_type, s, mdp)
             state_matrix[i,:] = pt
 
@@ -138,7 +137,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
 
                     if solver.is_mdp_generative
                         for j in 1:solver.n_generative_samples
-                            sp, r = generate_sr(mdp, s, a, solver.rng)
+                            sp, r = gen(DDNOut(:sp,:r), mdp, s, a, solver.rng)
                             u += r
 
                             if !isterminal(mdp,sp)
@@ -193,7 +192,7 @@ end
 
 # Not explicitly stored in policy - extract from value function interpolation
 function POMDPs.action(policy::GlobalApproximationValueIterationPolicy, s::S) where S
-    
+
     mdp = policy.mdp
     best_a_idx = -1
     max_util = -Inf
@@ -202,7 +201,7 @@ function POMDPs.action(policy::GlobalApproximationValueIterationPolicy, s::S) wh
 
 
     for a in sub_aspace
-        
+
         iaction = actionindex(mdp, a)
         u = value(policy,s,a)
 
@@ -222,11 +221,11 @@ function POMDPs.value(policy::GlobalApproximationValueIterationPolicy, s::S, a::
     discount_factor = discount(mdp)
     u = 0.0
 
-    # As in solve(), do different things based on whether 
+    # As in solve(), do different things based on whether
     # mdp is generative or explicit
     if policy.is_mdp_generative
         for j in 1:policy.n_generative_samples
-            sp, r = generate_sr(mdp, s, a, policy.rng)
+            sp, r = gen(DDNOut(:sp,:r), mdp, s, a, solver.rng)
             sp_point = convert_featurevector(policy.fv_type, sp, mdp)
             u += r + discount_factor*compute_value(policy.gfa, sp_point)
         end
