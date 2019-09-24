@@ -64,7 +64,7 @@ end
 
     # Have different requirements depending on whether solver MDP is generative or explicit
     if solver.is_mdp_generative
-        @req gen(DDNOut(:sp,:r), mdp, s, a, solver.rng)
+        @req gen(::DDNOut{(:sp,:r)}, ::P, ::S, ::A, ::typeof(solver.rng))
     else
         @req transition(::P, ::S, ::A)
         ss = sample_state(mdp, solver.rng)
