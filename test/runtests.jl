@@ -2,11 +2,11 @@ using POMDPModels
 using POMDPs
 using POMDPModelTools
 using StaticArrays
+using Statistics
 using Random
 using DiscreteValueIteration
 using GlobalApproximationValueIteration
 using Flux
-using Statistics
 using Test
 
 Random.seed!(1234)
