@@ -64,7 +64,7 @@ end
 
     # Have different requirements depending on whether solver MDP is generative or explicit
     if solver.is_mdp_generative
-        @req gen(::DDNOut{(:sp,:r)}, ::P, ::S, ::A, ::typeof(solver.rng))
+        @req gen(::P, ::S, ::A, ::typeof(solver.rng))
     else
         @req transition(::P, ::S, ::A)
         ss = sample_state(mdp, solver.rng)
@@ -137,7 +137,7 @@ function POMDPs.solve(solver::GlobalApproximationValueIterationSolver, mdp::Unio
 
                     if solver.is_mdp_generative
                         for j in 1:solver.n_generative_samples
-                            sp, r = gen(DDNOut(:sp,:r), mdp, s, a, solver.rng)
+                            sp, r = @gen(:sp,:r)(mdp, s, a, solver.rng)
                             u += r
 
                             if !isterminal(mdp,sp)
@@ -225,7 +225,7 @@ function POMDPs.value(policy::GlobalApproximationValueIterationPolicy, s::S, a::
     # mdp is generative or explicit
     if policy.is_mdp_generative
         for j in 1:policy.n_generative_samples
-            sp, r = gen(DDNOut(:sp,:r), mdp, s, a, solver.rng)
+            sp, r = @gen(:sp,:r)(mdp, s, a, solver.rng)
             sp_point = convert_featurevector(policy.fv_type, sp, mdp)
             u += r + discount_factor*compute_value(policy.gfa, sp_point)
         end

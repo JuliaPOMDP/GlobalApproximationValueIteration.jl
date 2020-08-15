@@ -16,6 +16,7 @@ using Flux
 using POMDPs
 using POMDPPolicies
 using POMDPModelTools
+using POMDPLinter: @POMDP_require, @warn_requirements
 
 export
     GlobalFunctionApproximator,
