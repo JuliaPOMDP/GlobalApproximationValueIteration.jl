@@ -1,7 +1,7 @@
 name = "GlobalApproximationValueIteration"
 uuid = "277f244e-4908-11e9-33c2-5d5365097ef8"
 repo = "https://github.com/JuliaPOMDP/GlobalApproximationValueIteration.jl"
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
