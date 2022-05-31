@@ -1,5 +1,5 @@
-[![Build Status](https://travis-ci.org/JuliaPOMDP/GlobalApproximationValueIteration.jl.svg?branch=master)](https://travis-ci.org/JuliaPOMDP/GlobalApproximationValueIteration.jl)
-[![Coverage Status](https://coveralls.io/repos/github/JuliaPOMDP/GlobalApproximationValueIteration.jl/badge.svg?branch=master)](https://coveralls.io/github/JuliaPOMDP/GlobalApproximationValueIteration.jl?branch=master)
+[![Build Status](https://github.com/JuliaPOMDP/GlobalApproximationValueIteration.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/JuliaPOMDP/GlobalApproximationValueIteration.jl)
+[![Coverage Status](https://codecov.io/gh/JuliaPOMDP/GlobalApproximationValueIteration.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaPOMDP/GlobalApproximationValueIteration.jl?branch=master)
 
 
 # GlobalApproximationValueIteration.jl
