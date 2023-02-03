@@ -14,8 +14,7 @@ using Flux
 
 # POMDPs imports
 using POMDPs
-using POMDPPolicies
-using POMDPModelTools
+using POMDPTools
 using POMDPLinter: @POMDP_require, @warn_requirements
 
 export

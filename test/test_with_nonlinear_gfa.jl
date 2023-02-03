@@ -46,7 +46,7 @@ function test_against_full_grid()
                 Dense(2, 10, relu),
                 Dense(10, 5, relu),
                 Dense(5, 1))
-    opt = ADAM(0.001)
+    opt = Adam(0.001)
 
     nonlin_gfa_1 = NonlinearGlobalFunctionApproximator(model1, opt, Flux.mse)
     nonlin_gfa_2 = NonlinearGlobalFunctionApproximator(model2, opt, Flux.mse)

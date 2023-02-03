@@ -1,7 +1,7 @@
 using Revise
 using POMDPModels
 using POMDPs
-using POMDPModelTools
+using POMDPTools
 using StaticArrays
 using Random
 using DiscreteValueIteration
