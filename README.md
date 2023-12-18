@@ -1,4 +1,4 @@
-[![Build Status](https://github.com/JuliaPOMDP/GlobalApproximationValueIteration.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/JuliaPOMDP/GlobalApproximationValueIteration.jl)
+[![Build status](https://github.com/JuliaPOMDP/GlobalApproximationValueIteration.jl/workflows/CI/badge.svg)](https://github.com/JuliaPOMDP/GlobalApproximationValueIteration.jl/actions)
 [![Coverage Status](https://codecov.io/gh/JuliaPOMDP/GlobalApproximationValueIteration.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaPOMDP/GlobalApproximationValueIteration.jl?branch=master)
 
 
