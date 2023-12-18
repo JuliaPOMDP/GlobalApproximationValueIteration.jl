@@ -6,7 +6,6 @@ using Statistics
 using Random
 using DiscreteValueIteration
 using GlobalApproximationValueIteration
-using Flux
 using Test
 
 Random.seed!(1234)
